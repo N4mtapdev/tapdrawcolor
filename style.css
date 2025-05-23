@@ -1,0 +1,56 @@
+body {
+  margin: 0;
+  padding: 10px;
+  font-family: Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #f0f0f0;
+}
+
+canvas {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid #000;
+  touch-action: none;
+}
+
+.controls {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+input[type="color"] {
+  width: 50px;
+  height: 50px;
+  border: none;
+  cursor: pointer;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+.zoomed {
+  transform: scale(2);
+  transform-origin: top left;
+}
+
+.message {
+  color: red;
+  font-size: 14px;
+  margin-top: 5px;
+}
