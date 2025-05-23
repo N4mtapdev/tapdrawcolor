@@ -3,19 +3,217 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tô Màu r/place</title>
+  <title>Tô Màu Theo Số</title>
   <link rel="stylesheet" href="style.css">
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js"></script>
 </head>
 <body>
+  <h2>Tô Màu Theo Số</h2>
+  <div class="instructions">
+    <p>Chọn màu từ bảng màu và tô vào ô có số tương ứng. Mỗi số ứng với một màu:</p>
+    <ul id="color-guide"></ul>
+  </div>
   <canvas id="canvas"></canvas>
   <div class="controls">
-    <input type="color" id="colorPicker" value="#000000">
+    <div class="color-palette" id="colorPalette"></div>
     <button id="zoomBtn">Phóng to</button>
+    <button id="clearBtn">Xóa tất cả</button>
   </div>
   <div id="message" class="message"></div>
-  <script src="script.js"></script>
+  <script>
+    // Cấu hình Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCPt2bgKtewN1tfCg34Ngh_f0moeqlxusk",
+      authDomain: "tapdrawcolor.firebaseapp.com",
+      databaseURL: "https://tapdrawcolor-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "tapdrawcolor",
+      storageBucket: "tapdrawcolor.firebasestorage.app",
+      messagingSenderId: "199258807774",
+      appId: "1:199258807774:web:fa5a2b7022489773aa514f",
+      measurementId: "G-7S67T61290"
+    };
+
+    // Khởi tạo Firebase với xử lý lỗi
+    let db;
+    try {
+      const app = firebase.initializeApp(firebaseConfig);
+      db = firebase.database(app);
+      console.log("Firebase initialized successfully");
+    } catch (error) {
+      console.error("Error initializing Firebase:", error);
+      showMessage("Lỗi kết nối Firebase. Vui lòng kiểm tra mạng hoặc cấu hình.");
+    }
+
+    // Thiết lập canvas
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const pixelSize = 40; // Tăng kích thước ô để dễ nhìn số
+    const gridSize = 10; // Lưới 10x10
+    const canvasSize = pixelSize * gridSize;
+    canvas.width = canvasSize;
+    canvas.height = canvasSize;
+
+    // Danh sách màu và số tương ứng
+    const colors = [
+      { number: 1, value: '#FF0000' }, // Đỏ
+      { number: 2, value: '#00FF00' }, // Xanh lá
+      { number: 3, value: '#0000FF' }, // Xanh dương
+      { number: 4, value: '#FFFF00' }, // Vàng
+      { number: 5, value: '#FF00FF' }  // Tím
+    ];
+    let selectedColor = null;
+
+    // Tạo hướng dẫn màu
+    const colorGuide = document.getElementById('color-guide');
+    colors.forEach(color => {
+      const li = document.createElement('li');
+      li.innerHTML = `<span style="color: ${color.value};">${color.number}</span> - Màu ${color.value}`;
+      colorGuide.appendChild(li);
+    });
+
+    // Tạo bảng màu
+    const colorPalette = document.getElementById('colorPalette');
+    colors.forEach(color => {
+      const colorDiv = document.createElement('div');
+      colorDiv.className = 'color';
+      colorDiv.style.backgroundColor = color.value;
+      colorDiv.innerHTML = `<span>${color.number}</span>`;
+      colorDiv.addEventListener('click', () => {
+        selectedColor = color;
+        document.querySelectorAll('.color').forEach(c => c.classList.remove('selected'));
+        colorDiv.classList.add('selected');
+        showMessage(`Đã chọn màu ${color.value} (Số ${color.number})`);
+      });
+      colorPalette.appendChild(colorDiv);
+    });
+
+    // Tạo lưới với số ngẫu nhiên
+    const numbers = new Array(gridSize * gridSize).fill(0).map(() => Math.floor(Math.random() * colors.length) + 1);
+
+    function drawGrid() {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvasSize, canvasSize);
+      for (let i = 0; i < gridSize; i++) {
+        for (let j = 0; j < gridSize; j++) {
+          const x = j * pixelSize;
+          const y = i * pixelSize;
+          const number = numbers[i * gridSize + j];
+          ctx.strokeStyle = '#E0E0E0';
+          ctx.strokeRect(x, y, pixelSize, pixelSize);
+          ctx.fillStyle = '#000';
+          ctx.font = '14px Arial';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(number, x + pixelSize / 2, y + pixelSize / 2);
+        }
+      }
+    }
+    drawGrid();
+
+    // Lắng nghe thay đổi từ Firebase
+    const canvasRef = db ? db.ref('canvas') : null;
+    if (canvasRef) {
+      canvasRef.on('value', (snapshot) => {
+        drawGrid();
+        const data = snapshot.val();
+        if (data) {
+          for (let key in data) {
+            const [x, y] = key.split('_').map(Number);
+            if (x >= 0 && x < canvasSize && y >= 0 && y < canvasSize) {
+              ctx.fillStyle = data[key].color;
+              ctx.fillRect(x, y, pixelSize, pixelSize);
+            }
+          }
+        }
+      }, (error) => {
+        console.error("Error syncing data:", error);
+        showMessage("Lỗi đồng bộ dữ liệu từ Firebase.");
+      });
+    }
+
+    // Xử lý sự kiện chạm và click
+    canvas.addEventListener('touchstart', handlePlacePixel, { passive: false });
+    canvas.addEventListener('click', handlePlacePixel);
+
+    async function handlePlacePixel(e) {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const x = Math.floor((clientX - rect.left) / pixelSize) * pixelSize;
+      const y = Math.floor((clientY - rect.top) / pixelSize) * pixelSize;
+
+      if (x < 0 || x >= canvasSize || y < 0 || y >= canvasSize) {
+        showMessage("Vị trí không hợp lệ.");
+        return;
+      }
+
+      if (!selectedColor) {
+        showMessage("Vui lòng chọn một màu trước!");
+        return;
+      }
+
+      const cellIndex = (y / pixelSize) * gridSize + (x / pixelSize);
+      const expectedNumber = numbers[cellIndex];
+      if (selectedColor.number !== expectedNumber) {
+        showMessage(`Ô này cần màu số ${expectedNumber}, bạn đã chọn màu số ${selectedColor.number}!`);
+        return;
+      }
+
+      const userId = 'user-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+      const lastPlacedRef = db.ref(`users/${userId}/lastPlaced`);
+      const lastPlaced = await lastPlacedRef.once('value');
+      const now = Date.now();
+      if (lastPlaced.val() && now - lastPlaced.val() < 5 * 60 * 1000) {
+        showMessage('Vui lòng chờ 5 phút trước khi đặt pixel tiếp theo.');
+        return;
+      }
+
+      try {
+        await db.ref(`canvas/${x}_${y}`).set({ color: selectedColor.value });
+        await lastPlacedRef.set(now);
+        ctx.fillStyle = selectedColor.value;
+        ctx.fillRect(x, y, pixelSize, pixelSize);
+        showMessage('Tô màu thành công!');
+      } catch (error) {
+        console.error("Error saving pixel:", error);
+        showMessage('Lỗi khi lưu pixel. Vui lòng thử lại.');
+      }
+    }
+
+    // Xử lý phóng to/thu nhỏ
+    const zoomBtn = document.getElementById('zoomBtn');
+    let zoomed = false;
+    zoomBtn.addEventListener('click', () => {
+      zoomed = !zoomed;
+      canvas.classList.toggle('zoomed', zoomed);
+      zoomBtn.textContent = zoomed ? 'Thu nhỏ' : 'Phóng to';
+      showMessage(zoomed ? 'Đã phóng to' : 'Đã thu nhỏ');
+    });
+
+    // Thêm nút xóa tất cả
+    const clearBtn = document.getElementById('clearBtn');
+    clearBtn.addEventListener('click', async () => {
+      if (confirm('Bạn có chắc muốn xóa tất cả pixel?')) {
+        try {
+          await db.ref('canvas').remove();
+          drawGrid();
+          showMessage('Đã xóa tất cả pixel thành công!');
+        } catch (error) {
+          console.error("Error clearing canvas:", error);
+          showMessage('Lỗi khi xóa pixel.');
+        }
+      }
+    });
+
+    // Hiển thị thông báo
+    function showMessage(text) {
+      const messageDiv = document.getElementById('message');
+      messageDiv.textContent = text;
+      setTimeout(() => (messageDiv.textContent = ''), 3000);
+    }
+  </script>
 </body>
 </html>
