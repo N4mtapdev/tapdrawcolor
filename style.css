@@ -1,6 +1,6 @@
 body {
   margin: 0;
-  padding: 10px;
+  padding: 20px;
   font-family: Arial, sans-serif;
   display: flex;
   flex-direction: column;
@@ -8,26 +8,69 @@ body {
   background-color: #f0f0f0;
 }
 
+h2 {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.instructions {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.instructions ul {
+  list-style: none;
+  padding: 0;
+}
+
+.instructions li {
+  margin: 5px 0;
+}
+
 canvas {
   max-width: 100%;
   height: auto;
-  border: 1px solid #000;
+  border: 2px solid #333;
   touch-action: none;
+  background-color: #fff;
 }
 
 .controls {
-  margin-top: 10px;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.color-palette {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
   justify-content: center;
 }
 
-input[type="color"] {
+.color {
   width: 50px;
   height: 50px;
-  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 1px 1px 2px #000;
   cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+
+.color:hover {
+  border-color: #333;
+}
+
+.color.selected {
+  border-color: #ff0000;
 }
 
 button {
@@ -46,11 +89,11 @@ button:hover {
 
 .zoomed {
   transform: scale(2);
-  transform-origin: top left;
+  transform-origin: top center;
 }
 
 .message {
   color: red;
   font-size: 14px;
-  margin-top: 5px;
+  margin-top: 10px;
 }
